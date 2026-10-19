@@ -1,0 +1,112 @@
+# CineList application stack. Start everything with:  docker compose up -d --build
+# Jenkins is deployed separately (infra/jenkins) so the pipeline never redeploys itself.
+name: cinelist
+
+services:
+  proxy:
+    build: ./proxy
+    image: cinelist/proxy:${TAG:-latest}
+    ports:
+      - "${HTTP_PORT:-8080}:8080"   # the ONLY published port
+    depends_on:
+      frontend:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      movies-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [frontend-net]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BUILD_NUMBER: ${TAG:-dev}   # printed in the page footer
+    image: cinelist/frontend:${TAG:-latest}
+    restart: unless-stopped
+    networks: [frontend-net]
+
+  auth-service:
+    build:
+      context: ./auth-service
+      target: production
+    image: cinelist/auth-service:${TAG:-latest}
+    environment:
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [frontend-net, backend-net]
+
+  movies-api:
+    build:
+      context: ./movies-api
+      target: production
+    image: cinelist/movies-api:${TAG:-latest}
+    environment:
+      PORT: 3002
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET}
+      OMDB_API_KEY: ${OMDB_API_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [frontend-net, backend-net]
+
+  db:
+    build: ./db
+    image: cinelist/db:${TAG:-latest}
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [backend-net]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]   # sessions survive redeploys
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [backend-net]
+
+volumes:
+  db-data:
+  redis-data:
+
+networks:
+  frontend-net:
+  backend-net:

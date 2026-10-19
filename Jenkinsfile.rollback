@@ -1,0 +1,63 @@
+// Parameterized rollback job (bonus): redeploys a PREVIOUS build's images, no rebuild.
+// Create a second Pipeline job with Script Path = Jenkinsfile.rollback
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'TARGET_TAG', defaultValue: '', description: 'Build number to roll back to, e.g. 14')
+  }
+
+  environment {
+    COMPOSE_PROJECT_NAME = 'cinelist'
+    TAG = "${params.TARGET_TAG}"
+  }
+
+  options { disableConcurrentBuilds() }
+
+  stages {
+    stage('Check Image Exists') {
+      steps {
+        script {
+          if (!params.TARGET_TAG?.trim()) {
+            error 'TARGET_TAG is required (a previous build number).'
+          }
+        }
+        sh 'docker image inspect cinelist/proxy:${TAG} cinelist/frontend:${TAG} cinelist/auth-service:${TAG} cinelist/movies-api:${TAG} cinelist/db:${TAG} > /dev/null'
+      }
+    }
+
+    stage('Rollback Deploy') {
+      steps {
+        checkout scm
+        withCredentials([file(credentialsId: 'cinelist-env', variable: 'ENV_FILE')]) {
+          sh 'cp "$ENV_FILE" .env'
+          sh 'docker compose up -d --no-build --remove-orphans'
+        }
+      }
+    }
+
+    stage('Verify') {
+      steps {
+        sh '''
+          for i in $(seq 1 24); do
+            if docker compose exec -T proxy wget -qO- http://localhost:8080/health/auth >/dev/null \
+            && docker compose exec -T proxy wget -qO- http://localhost:8080/health/movies >/dev/null \
+            && docker compose exec -T frontend wget -qO- http://localhost:8080/index.html | grep -q "buildLabel\\">${TAG}<"; then
+              echo "Rollback verified: build ${TAG} is live"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Rollback verification FAILED"
+          exit 1
+        '''
+      }
+    }
+  }
+
+  post {
+    success { echo "Rolled back to build ${TAG}" }
+    failure { echo "Rollback to ${TAG} failed" }
+    always  { sh 'rm -f .env' }
+  }
+}
