@@ -93,7 +93,7 @@ const INCEPTION_BODY = { title: "Inception", genre: "Sci-Fi", year: 2010, imdbID
 test("GET /health is ok, and 503 when the database is down", async () => {
   const repo = fakeRepo();
   await withServer(newApp(repo), async base => {
-    assert.equal((await call(base, "GET", "/health", { user: null })).status, 404);
+    assert.equal((await call(base, "GET", "/health", { user: null })).status, 200);
     repo.pingFails = true;
     assert.equal((await call(base, "GET", "/health", { user: null })).status, 503);
   });
