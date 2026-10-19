@@ -137,8 +137,8 @@ docs/           architecture.md (+ export architecture.png, technical-documentat
 
 | Member | Role |
 |---|---|
-| _name_ | Project Lead / Scrum Master |
-| _name_ | DevOps / CI-CD Engineer |
-| _name_ | Infrastructure Engineer |
-| _name_ | Backend and Database Engineer |
-| _name_ | Frontend, QA, and Documentation Lead |
+| _Heaven Gavino_ | Project Lead / Scrum Master |
+| _Caitlin Reyes_ | DevOps / CI-CD Engineer |
+| _Lee Shane Ashley De Leon_ | Infrastructure Engineer |
+| _Caitlin Reyes_ | Backend and Database Engineer |
+| _Lujille Sebandal_ | Frontend, QA, and Documentation Lead |
