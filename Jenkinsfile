@@ -55,10 +55,10 @@ pipeline {
       steps {
         sh '''
           for i in $(seq 1 24); do
-            if docker compose exec -T proxy wget -qO- http://localhost:8080/health/auth >/dev/null \
-            && docker compose exec -T proxy wget -qO- http://localhost:8080/health/movies >/dev/null \
-            && docker compose exec -T proxy wget -qO- http://localhost:8080/login.html >/dev/null \
-            && docker compose exec -T frontend wget -qO- http://localhost:8080/index.html | grep -q "buildLabel\\">${TAG}<"; then
+            if docker compose exec -T proxy wget -qO- http://127.0.0.1:8080/health/auth >/dev/null \
+            && docker compose exec -T proxy wget -qO- http://127.0.0.1:8080/health/movies >/dev/null \
+            && docker compose exec -T proxy wget -qO- http://127.0.0.1:8080/login.html >/dev/null \
+            && docker compose exec -T frontend wget -qO- http://127.0.0.1:8080/index.html | grep -q "buildLabel\\">${TAG}<"; then
               echo "Smoke test passed: build ${TAG} is live"
               exit 0
             fi

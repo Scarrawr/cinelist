@@ -1,4 +1,4 @@
-# CineList: Containerized Movie Watchlist with CI/CD
+c# CineList: Containerized Movie Watchlist with CI/CD
 
 A movie watchlist split into containers and deployed automatically by Jenkins. Push to Git → Jenkins tests the code, builds images tagged with the build number, deploys them with Docker Compose, and verifies they are healthy. No manual deploy commands.
 
